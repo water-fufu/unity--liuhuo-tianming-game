@@ -1,0 +1,133 @@
+// GameBootstrap.cs —— 主入口/全局协调（对位 Web main.js 编排层）+ 存读档 + 对象池
+// 单文件聚合骨架（仅 GameManager 一个 MonoBehaviour 匹配文件名，SaveSystem/ObjectPool 为静态工具类）。
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+namespace Liuhuo.Core
+{
+    public enum GameState { Start, LevelSelect, Battle, Pause, GameOver }
+
+    public class GameManager : MonoBehaviour
+    {
+        public static GameManager Instance;
+        public GameState State { get; private set; } = GameState.Start;
+
+        // S5 注入：士兵工厂 + 胜负判定记录
+        [Header("S5 战斗协调")]
+        public SoldierFactory factory;
+        public BaseSystem blueBase;   // 天庭(蓝)
+        public BaseSystem redBase;    // 玄朝(红)
+        public int winTeam = -1;       // -1=未分胜负；0=天庭胜/1=玄朝胜
+
+        [Header("S5 自动化自走(无头验证用，正式交付保持 false)")]
+        [Tooltip("true=进 Play 自动开战并召唤士兵(免键盘)，用于无头最小闭环验证")]
+        public bool autoTest = false;
+        [Tooltip("自动召唤每阵营数量(10=最小闭环 / 50=满编)；autoTest=false 时忽略")]
+        public int autoSummon = 10;
+
+        void Awake() { Instance = this; DontDestroyOnLoad(gameObject); }
+
+        void Start()
+        {
+            // 订阅基地摧毁 → 胜负判定（对位 Web 基地摧毁 → gameOver）
+            CombatSystem.OnBaseDestroyed += OnBaseDestroyed;
+            // S5 R1 防御性双保险：即使场景 Inspector 绑定在域重载后丢失，运行时也自动回填基地引用
+            // （工部二 S4 确认 GameManager 声明了 blueBase/redBase 但未显式转交 factory）
+            if (factory != null) { factory.blueBase = blueBase; factory.redBase = redBase; }
+            if (autoTest) StartCoroutine(AutoRun());
+        }
+
+        // 自动自走：进 Play 后免键盘召唤并开战（S5 无头闭环验证）
+        IEnumerator AutoRun()
+        {
+            yield return null; // 等一帧确保 factory/基地/动画器就绪
+            SetState(GameState.Battle);
+            if (factory != null)
+            {
+                for (int i = 0; i < autoSummon; i++) { factory.Summon(0); factory.Summon(1); }
+            }
+            Debug.Log($"[GameManager] 自动自走战斗已启动 summon={autoSummon}×2阵营");
+        }
+
+        void OnDestroy()
+        {
+            CombatSystem.OnBaseDestroyed -= OnBaseDestroyed;
+        }
+
+        public void SetState(GameState s)
+        {
+            State = s;
+            Debug.Log($"[GameManager] 状态切换 -> {s}");
+        }
+
+        // 基地摧毁回调：敌方基地被摧毁即胜负分出
+        private void OnBaseDestroyed(int destroyedTeam)
+        {
+            // destroyedTeam 是被摧毁的阵营，胜者是其对立阵营
+            winTeam = destroyedTeam == 0 ? 1 : 0;
+            SetState(GameState.GameOver);
+            Debug.Log($"[GameManager] 胜负已判 -> {(winTeam == 0 ? "天庭(蓝)" : "玄朝(红)")}胜");
+        }
+
+        // S5 调试入口：按 F1 各召唤 10 士兵（最小闭环测试），按 F2 冲满 50v50
+        void Update()
+        {
+            if (State != GameState.Battle || factory == null) return;
+            if (Input.GetKeyDown(KeyCode.F1))
+            {
+                for (int i = 0; i < 10; i++) { factory.Summon(0); factory.Summon(1); }
+                Debug.Log("[GameManager] F1 召唤 各10 士兵 (最小闭环)");
+            }
+            else if (Input.GetKeyDown(KeyCode.F2))
+            {
+                for (int i = 0; i < 50; i++) { factory.Summon(0); factory.Summon(1); }
+                Debug.Log("[GameManager] F2 召唤 各50 士兵 (满编 50v50)");
+            }
+            else if (Input.GetKeyDown(KeyCode.F3))
+            {
+                SetState(GameState.Battle);
+                Debug.Log("[GameManager] F3 进入战斗 (Battle 状态)");
+            }
+        }
+    }
+
+    // 存读档（对位 electron-adapter.js，Unity 侧 PlayerPrefs 等价物）
+    public static class SaveSystem
+    {
+        public static void SaveBattle(string jsonState) { PlayerPrefs.SetString("battle_state", jsonState); PlayerPrefs.Save(); }
+        public static string LoadBattle() { return PlayerPrefs.GetString("battle_state", ""); }
+        public static void ClearBattle() { PlayerPrefs.DeleteKey("battle_state"); }
+        public static float GetVolume(string k, float def) { return PlayerPrefs.GetFloat(k, def); }
+        public static void SetVolume(string k, float v) { PlayerPrefs.SetFloat(k, v); PlayerPrefs.Save(); }
+        public static int GetBestKills() { return PlayerPrefs.GetInt("best_kills", 0); }
+        public static void SetBestKills(int v) { if (v > GetBestKills()) { PlayerPrefs.SetInt("best_kills", v); PlayerPrefs.Save(); } }
+    }
+
+    // 通用对象池（士兵/子弹/特效复用，防 GC 抖动）
+    public class ObjectPool<T> where T : Component
+    {
+        private readonly Stack<T> _pool = new Stack<T>();
+        private readonly T _prefab;
+        private readonly Transform _parent;
+
+        public ObjectPool(T prefab, int prewarm, Transform parent)
+        {
+            _prefab = prefab; _parent = parent;
+            for (int i = 0; i < prewarm; i++)
+            {
+                var o = Object.Instantiate(prefab, parent);
+                o.gameObject.SetActive(false);
+                _pool.Push(o);
+            }
+        }
+        public T Get(Vector3 pos, Quaternion rot)
+        {
+            T o = _pool.Count > 0 ? _pool.Pop() : Object.Instantiate(_prefab, _parent);
+            o.transform.SetPositionAndRotation(pos, rot);
+            o.gameObject.SetActive(true);
+            return o;
+        }
+        public void Release(T o) { o.gameObject.SetActive(false); _pool.Push(o); }
+    }
+}

@@ -1,0 +1,29 @@
+# u3d-liuhuo codegraph 索引忽略 —— 排除非源码噪声，防止污染知识图谱
+
+# Unity 缓存与临时产物（含大量 .cs/.js 元数据拷贝，会严重污染索引）
+/Library/
+/Logs/
+/obj/
+/Temp/
+/UserSettings/
+/.u3d-work/
+/Tools/
+/S5_assets/
+
+# 构建产物
+/Build/
+/Dist/
+
+# 帧截图 / 分析数据 / 临时日志
+/frames/
+/*.png
+/*.log
+
+# 脚本生成的局部配置文件
+/args*.json
+/probe_args.json
+/refresh_args.json
+
+# CI / 编辑器无关
+/.idea/
+/.vs/

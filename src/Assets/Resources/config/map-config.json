@@ -1,0 +1,12 @@
+{
+  "gBase": {
+    "enabled": false,
+    "height": 80,
+    "pitch": 90,
+    "renderOrder": 2,
+    "width": 300,
+    "x": 0,
+    "y": 0.4,
+    "z": -110
+  }
+}

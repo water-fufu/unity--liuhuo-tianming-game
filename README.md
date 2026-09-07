@@ -1,76 +1,137 @@
-# 流火·天庭对决（Liuhuo · Tianming Showdown）
+# Liuhuo — Tianming Battle Arena (流火 · 天命战场)
 
-基于 Unity 2022.3.62f3c1（URP）开发的**两阵营实时对战** 3D 游戏。此为 Windows 64 位**预编译独立版**——依赖已全部打包在本压缩包内，**解压后双击 `Liuhuo.exe` 即可游玩，无需安装 Unity 或任何运行时（已内嵌 MonoBleedingEdge）**。
-
-> 版本：当前验证版本（圣裁/同死大招伤害范围全向×2、同死时长延至 7s、圣裁首秒不出伤、大招可连放无冷却）。
+A real-time **3D battle arena** (Heavenly Court `TianTing` vs `XuanChao`) rebuilt from a
+Three.js web original into a **fully-runable Unity URP project** — procedural VFX,
+headless build pipelines, and runtime probe-based self-verification. Open `src/` and
+run, or just unzip the release and play.
 
 ---
 
-## 一、运行说明（依赖已备齐，开箱即玩）
+## ✨ Highlights
 
-- **系统要求**：Windows 10/11 64 位（本项目已适配至 Win11 Pro 26200）。
-- **启动**：解压 zip → 进入解压目录 → 双击 **`Liuhuo.exe`**。
-- **免装原理**：Unity Player 以 `UnityPlayer.dll` + `MonoBleedingEdge`（内嵌 .NET/Mono 运行时）+ `UnityEngine*.dll`（Managed 模块）自包含运行，故**无需**另行安装 .NET、Unity 或任何游戏组件。
-- **关键文件**：`Liuhuo.exe`（启动器）、`Liuhuo_Data/`（资源+托管 dll 合集）、`UnityPlayer.dll`、`MonoBleedingEdge/`、`UnityCrashHandler64.exe`。
-
-## 二、玩法（目标）
-
-天庭（蓝/金，上端）与玄朝（红，下端）两大阵营在此地图对垒。**基地血量 10000**，一方基地血量归零即触发结算并判另一方获胜。士兵会自动索敌、移动、攻击，玩家通过**召唤大招**改变战局。你的目标是：存活并打爆敌方基地。
-
-## 三、原子功能清单（逐项可用）
-
-### A. 阵营与单位
-- A1 两个可切换阵营：**天庭**（蓝/金）、**玄朝**（红）。
-- A2 士兵为方块战士，天庭贴金边白袍、玄朝贴黑红盔甲（FBX 内嵌贴图本色）。
-- A3 士兵**正脸朝向**攻击/移动方向（AimOffset=-90°，正脸=+X，非侧身）。
-- A4 士兵自动索敌+朝向+攻击，伤害=其血量(100)，**一击致死**。
-- A5 士兵脚下**呼吸光环**（SoldierHalo），随士兵缩放，透出阵营色。
-- A6 士兵阵亡时弹出**"击杀!"**飘字（仅击杀提示，非伤害数值）。
-
-### B. 基地
-- B1 每方基地 **10000 HP**，显示于地图两端、阵营色标识。
-- B2 基地可被士兵攻击打掉，也可被大招伤害。
-- B3 基地血量归零 → **触发结算**（状态切换 GameOver，判另一阵营胜）。
-
-### C. 大招（点按钮触发，圣裁/同死**无冷却、可连放**）
-- C1 **圣裁（天庭 / 上端触发键）**——金芒审判。
-  - 伤害半径**全向 60m**（覆盖地图远/上端士兵）。
-  - **第一秒不出伤，第二秒起每秒一次**（tick 型）。
-  - 士兵：每次一击必杀(100)；**基地：一次性 8000**。
-  - 视觉：金色光柱+光波扩大（自定义 URP Unlit shader，实时公式动态流动）。
-- C2 **同死（玄朝 / 下端触发键）**——红色激光天罚雨。
-  - 伤害半径**全向 100m**（覆盖地图远/下端士兵）。
-  - 时长**延至 7 秒**（70 tick，基地伤害按 7s 重分摊，总伤仍 8000）。
-  - 士兵：一击必杀(100)；**基地：总伤 8000**（摊至全程 tick）。
-  - 视觉：红色激光雨幕（Stretch 拉长光柱，最大 4000 粒子）+ 落地震荡涟漪 + 血雾，随范围扩大密度保持不变。
-- C3 大招按钮四个（同位布局）：**天庭召唤 / 圣裁 / 同死 / 玄朝召唤**。
-
-### D. UI / 流程
-- D1 启动**直入战斗**（无开始页，进入即开战）。
-- D2 基地血条回显（HP 面板）。
-- D3 大招触发后有**屏幕震动**注入。
-- D4 结算面板：**金色"大胜"** + 隐藏败方基地 + 可**重开**（RestartBattle 完整重载恢复）。
-
-### E. 特效 / 环境
-- E1 受击特效（HitFx，阵营色，白闪 + 击退）。
-- E2 战场环境**火花**（AmbientFx 发射区覆盖战场，45° 下坠）+ 硝烟。
-- E3 大招随范围扩大的粒子密度/面积/涟漪同步放大（保单位面积频率）。
-
-## 四、目录 / 技术存量（面向开发者）
-
-| 路径（解压后） | 说明 |
+| Capability | Why it matters |
 |---|---|
-| `Liuhuo.exe` | Windows 启动器 |
-| `Liuhuo_Data/Managed/` | 托管程序集 `Assembly-CSharp.dll`（全部玩法逻辑）、`UnityEngine*.dll` |
-| `Liuhuo_Data/Resources/` | 场景与资源 |
-| `MonoBleedingEdge/` | 内嵌 .NET/Mono 运行时（免装框架） |
-| `UnityPlayer.dll` | Unity 原生 Player |
-| `UnityCrashHandler64.exe` | 崩溃处理器 |
+| **Fully runable Unity project** | `src/Assets + ProjectSettings + Packages` opens directly in Unity 2022.3; no external build keys needed |
+| **Procedural VFX** | Holy-Judgment dome & Same-Death laser rain built entirely from `ParticleSystem` + a custom URP Unlit shader — no baked textures, no external model assets for the effects |
+| **Custom URP shader (`HolyDome`)** | Replicates a three.js `ShaderMaterial` live-time formula (dual-frequency sinusoidal flow + glowing golden rim) that a static 1D texture could never reproduce |
+| **Headless batch build chain** | `BatchPhase3.BuildWin` runs via `Unity.exe -batchmode -quit` — a one-command reproducible build (`error CS=0`, `BuildWin result=Succeeded`) |
+| **Runtime probe-based self-verification** | In-game probes (`UltProbe`, `RangeProbe`, `SameProbe`, `SparkProbe`, `BF-T1`) print `Debug.Log` evidence to prove damage, AOE coverage, particle density, and soldier facing — replacing "I think it works" |
+| **Geometric-consistency validation** | e.g. radius ×2 → area ×4 → emission rate ×4 keeps per-area density exact (`576 / 100800 == 144 / 25200 == 0.00571`) |
+| **GPU instancing + URP quality toggles** | instanced buildings/particles; anti-alias & bloom are independent runtime switches (not a locked pipeline) |
 
-- **引擎**：Unity 2022.3.62f3c1，URP 渲染管线（内置 Bloom/抗锯齿开关）。
-- **核心脚本**（源码在独立工程 `Assets/Scripts/`，此处仅打发布版）：`UltController.cs`（大招），`SameDeathFx.cs`（同死红雨视觉），`Soldier.cs`（士兵），`GameBootstrap.cs`（基地/结算），`SoldierFactory.cs`（士兵生成）。
+---
 
-## 五、已知可玩性注记
-- 圣裁/同死基地伤害均按**用户拍板 8000** 基准；士兵伤害对表 `SoldierTag.maxHp=100`（一击必杀）。
-- 大招冷却已取消（`cooldown=0`），可连续触发体验。
-- 士兵由 AI 自动交战，玩家操作重点为**选择时机放大招**改变战局。
+## 🧱 Project Structure
+
+```
+liuhuo-tianming-game/
+├─ README.md           ← you are here (English + 中文速览)
+├─ LICENSE             ← MIT (code)
+├─ src/                ← ★ the Unity engine project
+│  ├─ Assets/
+│  │  ├─ Scripts/
+│  │  │  ├─ Core/      ← combat, soldier, base, camera, bootstrap
+│  │  │  ├─ FX/        ← procedural VFX, ults, particle pool
+│  │  │  ├─ UI/        ← HUD, settlement, front-end, settings
+│  │  │  ├─ PoseAnim/  ← pose-animation baking
+│  │  │  ├─ Model/     ← base & zone-ring factory
+│  │  │  └─ Audio/     ← audio controller
+│  │  ├─ Editor/       ← 10 build/packaging/optimization tools
+│  │  ├─ Scenes/       ← gameplay & UI scenes
+│  │  └─ Models/Fx/    ← art & VFX assets
+│  ├─ ProjectSettings/ ← 21 Unity configs (URP, tags, quality…)
+│  └─ Packages/        ← manifest (URP, Burst, …)
+└─ release/
+   └─ liuhuo_tianming_game.zip  ← play in one double-click (no Unity/.NET needed)
+```
+
+---
+
+## 🛠 Tech Stack
+
+- **Unity 2022.3.62f3c1** + **URP (Universal Render Pipeline)**
+- C# gameplay code, Editor extension scripts, batch-mode build tooling
+- Custom shaders (URP Unlit) for the Holy-Dome replica
+- `ParticleSystem` procedural VFX + a shared material pool (`ParticleFxPool`) to avoid per-frame allocs
+
+---
+
+## 🧩 Module Map
+
+**Core** — `CombatSystem`, `Soldier`, `SoldierAI`, `BaseSystem`, `BattleCamera`,
+`GameBootstrap`, `BattleStage`, `WeaponConfig`, `Bullet`, `BuildingManager`,
+`FloatingText`, `HitFXManager`, `DeathFXManager`, `StageQuotes`, `MapLoader`,
+`SoldierFactory`, `SoldierHalo`, `SoldierTag`
+
+**FX** — `UltController`, `HolyJudgment`, `TongsiUltimate`, `HolyJudgmentFx`,
+`SameDeathFx`, `AmbientFx`, `HitFx`, `ParticleFxPool`, `VFXConfig`
+
+**UI** — `UILoader`, `HUDController`, `SettlementManager`, `FrontendUI`,
+`SettingsPanel`, `EntryFlow`
+
+**PoseAnim** — `PoseBaker`, `PoseAnimSystem`
+**Model** — `BaseModelFactory`, `ZoneRing`
+**Audio** — `AudioController`
+
+**Editor** — `BatchPhase3`, `S5_Builder`, `ImportSettingsOptimizer`, `URPSetup`,
+`GpuInstancingEnabler`, `SceneAudit`, `VerifyHitFX`, `VerifyP6`, `HitFXBuilder`,
+`TmpReimportUi`
+
+---
+
+## ▶️ Build & Run
+
+**Play instantly (bundled)**
+```
+unzip release/liuhuo_tianming_game.zip
+double-click Liuhuo.exe          # Mono runtime is embedded — no Unity/.NET needed
+```
+
+**From source**
+```
+# In Unity Hub, add src/ and open with Unity 2022.3.62f3c1
+# Build via batchmode:
+Unity.exe -batchmode -quit -projectPath src \
+  -executeMethod Liuhuo.EditorTools.BatchPhase3.BuildWin
+```
+
+---
+
+## 🧪 Verification Evidence
+
+Everything below is machine-checked, not asserted:
+
+- **Build**: `error CS=0`, `BuildWin result=Succeeded`, `Assembly-CSharp.dll` mtime bumped
+  (the exe is a launcher container, so the authoritative signal is the `.dll`).
+- **AOE center / radius** — `[UltProbe] AOE中心(4.70, 0.00, 71.40) sameRadius=100 holyRadius=60`
+- **Range coverage** — `[RangeProbe] 圣裁 新半径(60)内活敌=20 旧半径(30)内=7 额外覆盖=13`
+  (proves the expansion reaches far-side soldiers — the exact complaint it fixed)
+- **Density preserved** — `[SameProbe] 发射率rate=576.00 发射面scale=(360.00, 1.00, 280.00) maxParticles=4000`
+- **Soldier facing** — `[BF-T1]` probes the visual **front axis** (`+X`, `aimOffset=-90`)
+  rather than `transform.forward`, which would be a circular-logic false positive.
+
+---
+
+## 中文速览 (Quick Chinese Overview)
+
+**这是什么**：一个天庭 vs 玄朝的 3D 实时战场（流火·天命战场），把原本的 Three.js Web 版完整复刻成可运行的 Unity URP 工程。
+
+**技术亮点**：
+- **纯程序化特效**——圣裁光幕、同死激光雨全部用 `ParticleSystem` + 自定义 URP Unlit shader 构建，无烘焙贴图、无外置特效模型。
+- **自定义 URP shader 复刻 three.js ShaderMaterial**——圣裁穹顶的双频正弦流动 + 金色亮环公式，静态纹理做不到的实时感。
+- **无头批量构建链**——`BatchPhase3.BuildWin` 一键 `-batchmode` 出包（`error CS=0`、`Succeeded`）。
+- **运行时探针自证**——`UltProbe / RangeProbe / SameProbe / SparkProbe / BF-T1` 用 `Debug.Log` 打印铁证日志，实证伤害、AOE 覆盖、粒子密度、士兵朝向，替代"我觉得没问题"。
+- **几何一致性校验**——半径×2 → 面积×4 → 发射率×4，单位面积粒子密度精确不变（`0.00571`）。
+- **GPU instancing + URP 质量开关**——建筑与粒子实例化；抗锯齿 / Bloom 独立运行时控制。
+
+**怎么跑**：解压 `release/liuhuo_tianming_game.zip` 双击 `Liuhuo.exe` 即玩（内嵌 Mono 运行时，免装 Unity/.NET）；或用 Unity 2022.3 打开 `src/` 构建。
+
+---
+
+## 📄 License & Asset-Source Disclaimer
+
+- **Code** is released under the **MIT License** (see `LICENSE`).
+- **Art / models / VFX assets** in this repo are **replicated from an original Web (Three.js)
+  version** for **technical learning & capability showcase only**. All such assets and their
+  visual design remain the **copyright of the original rights holder**.
+  If you are the owner and wish this material removed, open an issue and it will be taken down.
